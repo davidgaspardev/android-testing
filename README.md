@@ -40,8 +40,10 @@ You should be familiar with:
 Getting Started
 ---------------
 
-1. Download and run the app.
-2. Check out one of the codelabs mentioned above.
+1. Android Studio (Jellyfish or above)
+2. JDK 21 with `JAVA_HOME` environment variable set. If you don't have JDK 21 installed or `JAVA_HOME` is not set, consider using a tool like `sdkman` to simplify the process. Refer to the sdkman documentation for installation instructions: [sdkman installation](https://sdkman.io/install)
+3. Download and run the app. 
+4. Check out one of the codelabs mentioned above.
 
 License
 -------
