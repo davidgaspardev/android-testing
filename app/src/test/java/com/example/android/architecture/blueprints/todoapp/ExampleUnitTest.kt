@@ -1,5 +1,6 @@
 package com.example.android.architecture.blueprints.todoapp
 
+import androidx.core.math.MathUtils
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -14,4 +15,10 @@ class ExampleUnitTest {
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
     }
+
+    @Test
+     fun check(){
+         var result = MathUtils.multiplyExact(2,3)
+         assertEquals(result, 6)
+     }
 }
