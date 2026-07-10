@@ -8,8 +8,11 @@ import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepo
 import com.example.android.architecture.blueprints.todoapp.data.source.local.TasksLocalDataSource
 import com.example.android.architecture.blueprints.todoapp.data.source.local.ToDoDatabase
 import com.example.android.architecture.blueprints.todoapp.data.source.remote.TasksRemoteDataSource
+import kotlinx.coroutines.runBlocking
 
 object ServiceLocator {
+    private val lock = Any()
+
     private var database: ToDoDatabase? = null
 
     @Volatile
@@ -41,5 +44,20 @@ object ServiceLocator {
         ).build()
         database = result
         return result
+    }
+
+    @VisibleForTesting
+    fun resetRepository() {
+        synchronized(lock) {
+            runBlocking {
+                TasksRemoteDataSource.deleteAllTasks()
+            }
+            database?.apply {
+                clearAllTables()
+                close()
+            }
+            database = null
+            tasksRepository = null
+        }
     }
 }
