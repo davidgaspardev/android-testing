@@ -1,13 +1,16 @@
 package com.example.android.architecture.blueprints.todoapp.data.source
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import com.example.android.architecture.blueprints.todoapp.MainCoroutineRule
 import com.example.android.architecture.blueprints.todoapp.data.Result
 import com.example.android.architecture.blueprints.todoapp.data.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.core.IsEqual
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 class DefaultTasksRepositoryTest {
@@ -23,18 +26,24 @@ class DefaultTasksRepositoryTest {
 
     private lateinit var tasksRepository: DefaultTasksRepository
 
+    @get:Rule
+    var instantExecutorRule = InstantTaskExecutorRule()
+
+    @get:Rule
+    val mainCoroutineRule = MainCoroutineRule()
+
     @Before
     fun createRepository() {
         tasksRemoteDataSource = FakeDataSource(remoteTasks.toMutableList())
         tasksLocalDataSource = FakeDataSource(localTasks.toMutableList())
 
         tasksRepository = DefaultTasksRepository(tasksRemoteDataSource, tasksLocalDataSource,
-            Dispatchers.Unconfined)
+            Dispatchers.Main)
     }
 
     @ExperimentalCoroutinesApi
     @Test
-    fun getTasks_requestsAllTasksFromRemoteDataSource() = runBlocking {
+    fun getTasks_requestsAllTasksFromRemoteDataSource() = mainCoroutineRule.runBlockingTest {
         val tasks = tasksRepository.getTasks(true) as Result.Success
         assertThat(tasks.data, IsEqual(remoteTasks))
     }
