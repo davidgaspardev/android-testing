@@ -50,11 +50,13 @@ class FakeTestRepository : TasksRepository {
     }
 
     override suspend fun completeTask(task: Task) {
-        TODO("Not yet implemented")
+        tasksServiceData[task.id]?.isCompleted = true
+        refreshTasks()
     }
 
     override suspend fun completeTask(taskId: String) {
-        TODO("Not yet implemented")
+        tasksServiceData[taskId]?.isCompleted = true
+        refreshTasks()
     }
 
     override suspend fun activateTask(task: Task) {
