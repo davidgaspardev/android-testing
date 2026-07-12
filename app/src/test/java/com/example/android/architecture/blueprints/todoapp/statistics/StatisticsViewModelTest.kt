@@ -60,9 +60,10 @@ class StatisticsViewModelTest {
     }
 
     @Test
-    fun loadStatisticsWhenTasksAreUnavailable_callErrorToDisplay() {
+    fun loadStatisticsWhenTasksAreUnavailable_callErrorToDisplay() = runTest(mainCoroutineRule.dispatcher) {
         tasksRepository.setReturnError(true)
         statisticsViewModel.refresh()
+        advanceUntilIdle()
 
         assertThat(statisticsViewModel.empty.getOrAwaitValue(), `is`(true))
         assertThat(statisticsViewModel.error.getOrAwaitValue(), `is`(true))
