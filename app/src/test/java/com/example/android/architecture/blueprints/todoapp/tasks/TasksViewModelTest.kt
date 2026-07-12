@@ -8,14 +8,11 @@ import com.example.android.architecture.blueprints.todoapp.R
 import com.example.android.architecture.blueprints.todoapp.data.Task
 import com.example.android.architecture.blueprints.todoapp.data.source.FakeTestRepository
 import com.example.android.architecture.blueprints.todoapp.util.getOrAwaitValue
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
-import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Rule
@@ -65,17 +62,17 @@ class TasksViewModelTest {
     }
 
     @Test
-    fun completeTask_dataAndSnackbarUpdated() {
+    fun completeTask_dataAndSnackbarUpdated() = runTest(mainCoroutineRule.dispatcher) {
         // With a repository that has an active task
         val task = Task("Title", "Description")
         tasksRepository.addTasks(task)
 
         // Complete task
         tasksViewModel.completeTask(task, true)
+        advanceUntilIdle()
 
         // Verify the task is completed
         assertThat(tasksRepository.tasksServiceData[task.id]?.isCompleted, `is`(true))
-
 
         // The snackbar is updated
         val snackbarText = tasksViewModel.snackbarText.getOrAwaitValue()

@@ -6,7 +6,7 @@ import com.example.android.architecture.blueprints.todoapp.data.Result
 import com.example.android.architecture.blueprints.todoapp.data.Task
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.core.IsEqual
 import org.junit.Before
@@ -43,7 +43,7 @@ class DefaultTasksRepositoryTest {
 
     @ExperimentalCoroutinesApi
     @Test
-    fun getTasks_requestsAllTasksFromRemoteDataSource() = mainCoroutineRule.runBlockingTest {
+    fun getTasks_requestsAllTasksFromRemoteDataSource() = runTest(mainCoroutineRule.dispatcher) {
         val tasks = tasksRepository.getTasks(true) as Result.Success
         assertThat(tasks.data, IsEqual(remoteTasks))
     }

@@ -6,8 +6,11 @@ import com.example.android.architecture.blueprints.todoapp.data.Task
 import com.example.android.architecture.blueprints.todoapp.data.source.FakeTestRepository
 import com.example.android.architecture.blueprints.todoapp.util.getOrAwaitValue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runBlockingTest
-import org.junit.Assert.*
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.hamcrest.MatcherAssert.assertThat
+import org.hamcrest.Matchers.`is`
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -34,7 +37,7 @@ class StatisticsViewModelTest {
     }
 
     @Test
-    fun activeTasksPercent_66_67percent() = mainCoroutineRule.runBlockingTest {
+    fun activeTasksPercent_66_67percent() {
         val activeTask1 = Task("Task 1", "Description 1", false)
         val activeTask2 = Task("Task 2", "Description 2", false)
         val completedTask3 = Task("Task 3", "Description 3", true)
@@ -42,9 +45,17 @@ class StatisticsViewModelTest {
         tasksRepository.addTasks(activeTask2)
         tasksRepository.addTasks(completedTask3)
 
-        statisticsViewModel.refresh()
-
         assertEquals(66.67f, statisticsViewModel.activeTasksPercent.getOrAwaitValue(), 0.01f)
         assertEquals(33.33f, statisticsViewModel.completedTasksPercent.getOrAwaitValue(), 0.01f)
+    }
+
+    @Test
+    fun loadTasks_loading() = runTest(mainCoroutineRule.dispatcher) {
+        statisticsViewModel.refresh()
+
+        assertThat(statisticsViewModel.dataLoading.getOrAwaitValue(), `is`(true))
+        advanceUntilIdle()
+
+        assertThat(statisticsViewModel.dataLoading.getOrAwaitValue(), `is`(false))
     }
 }
