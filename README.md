@@ -21,8 +21,9 @@ Based on the [Advanced Android Kotlin Testing Codelabs](https://codelabs.develop
 9. [Testing Room — DAO and LocalDataSource](#9-testing-room--dao-and-localdatasource)
 10. [Dependency injection in tests — Service Locator](#10-dependency-injection-in-tests--service-locator)
 11. [Key utilities](#11-key-utilities)
-12. [Running the tests](#12-running-the-tests)
-13. [Pre-requisites](#13-pre-requisites)
+12. [Idling Resources — syncing Espresso with async work](#12-idling-resources--syncing-espresso-with-async-work)
+13. [Running the tests](#13-running-the-tests)
+14. [Pre-requisites](#14-pre-requisites)
 
 ---
 
@@ -488,7 +489,109 @@ They are functionally similar but live in different source sets because `src/tes
 
 ---
 
-## 12. Running the tests
+## 12. Idling Resources — syncing Espresso with async work
+
+### The problem
+
+Espresso synchronizes with the UI thread: it waits for the main thread to be idle before running actions or assertions. But when a `viewModelScope.launch` fires a coroutine on a background dispatcher, Espresso has no way to know that work is still in progress. It may check a view before the data has arrived, making the test **flaky** — passing on a fast device and failing on a slow CI server.
+
+### What is an IdlingResource?
+
+An `IdlingResource` is a contract between your app and Espresso:
+
+- Your app **increments** a counter when async work starts
+- Your app **decrements** the counter when the work finishes
+- Espresso polls the counter and **blocks assertions** while it is non-zero
+
+When the counter reaches zero, Espresso considers the app idle and proceeds.
+
+### EspressoIdlingResource
+
+`EspressoIdlingResource` is a singleton that wraps `CountingIdlingResource` — an Espresso built-in that implements the counter:
+
+```kotlin
+// src/main/.../util/EspressoIdlingResource.kt
+object EspressoIdlingResource {
+    private const val RESOURCE = "GLOBAL"
+
+    @JvmField
+    val countingIdlingResource = CountingIdlingResource(RESOURCE)
+
+    fun increment() = countingIdlingResource.increment()
+
+    fun decrement() {
+        if (!countingIdlingResource.isIdleNow) {
+            countingIdlingResource.decrement()
+        }
+    }
+}
+```
+
+The `if (!isIdleNow)` guard prevents a `IllegalStateException` if `decrement()` is called when the counter is already at zero.
+
+### wrapEspressoIdlingResource
+
+Rather than calling `increment` / `decrement` manually in every method, the project exposes an inline helper:
+
+```kotlin
+inline fun <T> wrapEspressoIdlingResource(function: () -> T): T {
+    EspressoIdlingResource.increment()
+    return try {
+        function()
+    } finally {
+        EspressoIdlingResource.decrement()
+    }
+}
+```
+
+The `finally` block guarantees the counter is always decremented, even if the wrapped code throws.
+
+Every async operation in `DefaultTasksRepository` is wrapped with it:
+
+```kotlin
+override suspend fun getTasks(forceUpdate: Boolean): Result<List<Task>> {
+    wrapEspressoIdlingResource {
+        if (forceUpdate) { updateTasksFromRemoteDataSource() }
+        return tasksLocalDataSource.getTasks()
+    }
+}
+```
+
+### Registering the resource in tests
+
+Espresso won't observe the counter unless it is registered. In end-to-end tests that launch a real Activity, register it in `@Before` and unregister in `@After`:
+
+```kotlin
+@Before
+fun registerIdlingResource() {
+    IdlingRegistry.getInstance().register(EspressoIdlingResource.countingIdlingResource)
+}
+
+@After
+fun unregisterIdlingResource() {
+    IdlingRegistry.getInstance().unregister(EspressoIdlingResource.countingIdlingResource)
+}
+```
+
+### Dependency and unit-test compatibility
+
+`EspressoIdlingResource` lives in `src/main` (not `src/androidTest`) because the production code calls it at runtime. This requires the dependency to be `implementation`, not `androidTestImplementation`:
+
+```groovy
+implementation "androidx.test.espresso:espresso-idling-resource:$espressoVersion"
+```
+
+`CountingIdlingResource` internally calls `android.text.TextUtils.isEmpty()`. In JVM unit tests, Android SDK methods are stubs that throw by default. This causes an `ExceptionInInitializerError` the first time any code path initializes `EspressoIdlingResource`. The fix is:
+
+```groovy
+testOptions.unitTests {
+    returnDefaultValues = true  // Android stubs return 0/false/null instead of throwing
+}
+```
+
+---
+
+## 13. Running the tests
 
 ```bash
 # Run all JVM unit tests
@@ -507,7 +610,7 @@ Test reports are generated at:
 
 ---
 
-## 13. Pre-requisites
+## 14. Pre-requisites
 
 - Android Studio Jellyfish or above
 - JDK 17 (`JAVA_HOME` pointing to JDK 17)
