@@ -86,4 +86,31 @@ class TasksActivityTest {
         // Make sure the activity is closed before resetting the db:
         activityScenario.close()
     }
+
+    @Test
+    fun createOneTask_deleteTask() {
+        val activityScenario = ActivityScenario.launch(TasksActivity::class.java)
+        dataBindingIdlingResource.monitorActivity(activityScenario)
+
+        // Add an active task by clicking on the add task button
+        onView(withId(R.id.add_task_fab)).perform(click())
+        onView(withId(R.id.add_task_title_edit_text)).perform(replaceText("Publish Moveflix app on the Google Play"))
+        onView(withId(R.id.add_task_description_edit_text)).perform(replaceText("Moveflix is a Flutter app to watch workouts"))
+        onView(withId(R.id.save_task_fab)).perform(click())
+
+        // Verify task is displayed on screen in the task list
+        onView(withText("Publish Moveflix app on the Google Play")).check(matches(isDisplayed()))
+
+        // Open the task detail
+        onView(withText("Publish Moveflix app on the Google Play")).perform(click())
+        onView(withId(R.id.task_detail_title_text)).check(matches(withText("Publish Moveflix app on the Google Play")))
+        onView(withId(R.id.task_detail_description_text)).check(matches(withText("Moveflix is a Flutter app to watch workouts")))
+        onView(withId(R.id.task_detail_complete_checkbox)).check(matches(not(isChecked())))
+
+        // Click on the delete button
+        onView(withId(R.id.menu_delete)).perform(click())
+
+        // Verify task is removed from the list
+        onView(withText("Publish Moveflix app on the Google Play")).check(doesNotExist())
+    }
 }
