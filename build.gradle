@@ -46,7 +46,7 @@ ext {
     archTestingVersion = '2.0.0'
     cardVersion = '1.0.0'
     coroutinesVersion = '1.8.0'
-    dexMakerVersion = '2.12.1'
+    dexMakerVersion = '2.28.6'
     espressoVersion = '3.5.1'
     fragmentVersion = '1.1.0-alpha07'
     fragmentKtxVersion = '1.7.1'

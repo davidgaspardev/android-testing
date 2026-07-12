@@ -15,7 +15,6 @@
  */
 package com.example.android.architecture.blueprints.todoapp.tasks
 
-import android.app.Application
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.lifecycle.*
@@ -24,7 +23,6 @@ import com.example.android.architecture.blueprints.todoapp.R
 import com.example.android.architecture.blueprints.todoapp.data.Result
 import com.example.android.architecture.blueprints.todoapp.data.Result.Success
 import com.example.android.architecture.blueprints.todoapp.data.Task
-import com.example.android.architecture.blueprints.todoapp.data.source.DefaultTasksRepository
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksDataSource
 import com.example.android.architecture.blueprints.todoapp.data.source.TasksRepository
 import kotlinx.coroutines.launch
@@ -37,20 +35,6 @@ class TasksViewModel(
 ) : ViewModel() {
 
     private val _forceUpdate = MutableLiveData<Boolean>(false)
-
-    private val _items: LiveData<List<Task>> = _forceUpdate.switchMap { forceUpdate ->
-        if (forceUpdate) {
-            _dataLoading.value = true
-            viewModelScope.launch {
-                tasksRepository.refreshTasks()
-                _dataLoading.value = false
-            }
-        }
-        tasksRepository.observeTasks().switchMap { filterTasks(it) }
-
-    }
-
-    val items: LiveData<List<Task>> = _items
 
     private val _dataLoading = MutableLiveData<Boolean>()
     val dataLoading: LiveData<Boolean> = _dataLoading
@@ -82,6 +66,21 @@ class TasksViewModel(
     val newTaskEvent: LiveData<Event<Unit>> = _newTaskEvent
 
     private var resultMessageShown: Boolean = false
+
+    // Declared after all properties referenced in its lambdas so eager switchMap
+    // evaluation in lifecycle 2.7+ doesn't access uninitialized fields.
+    private val _items: LiveData<List<Task>> = _forceUpdate.switchMap { forceUpdate ->
+        if (forceUpdate) {
+            _dataLoading.value = true
+            viewModelScope.launch {
+                tasksRepository.refreshTasks()
+                _dataLoading.value = false
+            }
+        }
+        tasksRepository.observeTasks().switchMap { filterTasks(it) }
+    }
+
+    val items: LiveData<List<Task>> = _items
 
     // This LiveData depends on another so we can use a transformation.
     val empty: LiveData<Boolean> = _items.map {
